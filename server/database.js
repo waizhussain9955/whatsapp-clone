@@ -4,10 +4,10 @@ let pool;
 
 async function initDb() {
   pool = new Pool({
-    user: 'postgres',
+    user: 'postgres.pithpspoeugydpzjgowg',
     password: '+zTrgwG*%v9/pn4',
-    host: 'db.pithpspoeugydpzjgowg.supabase.co',
-    port: 5432,
+    host: 'aws-1-ap-northeast-1.pooler.supabase.com',
+    port: 6543,
     database: 'postgres',
     ssl: { rejectUnauthorized: false }
   });

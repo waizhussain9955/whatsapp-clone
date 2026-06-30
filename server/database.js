@@ -130,10 +130,16 @@ async function saveContact(userId, contactId) {
 
 async function getContacts(userId) {
   const res = await pool.query(
-    'SELECT u.* FROM users u INNER JOIN contacts c ON u.id = c."contactId" WHERE c."userId" = $1',
+    'SELECT c."contactId" as id, u.name, u."avatarUrl", u.about, u."lastSeen" FROM contacts c LEFT JOIN users u ON c."contactId" = u.id WHERE c."userId" = $1',
     [userId]
   );
-  return res.rows;
+  return res.rows.map(row => ({
+    id: row.id,
+    name: row.name || row.id, // Fallback to ID if unregistered
+    avatarUrl: row.avatarUrl || `https://ui-avatars.com/api/?name=${row.name || row.id}&background=075E54&color=fff`,
+    about: row.about || 'Hey there! I am using WhatsApp.',
+    lastSeen: row.lastSeen || 'offline'
+  }));
 }
 
 async function saveStatus(status) {

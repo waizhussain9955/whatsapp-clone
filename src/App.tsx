@@ -35,6 +35,28 @@ function App() {
   useEffect(() => {
     userProfileRef.current = userProfile;
   }, [userProfile]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('whatsapp_clone_profile');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.id) {
+          setUserProfile(parsed);
+          setIsRegistered(true);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  const handleRegister = () => {
+    if (userProfile.id && userProfile.name) {
+      localStorage.setItem('whatsapp_clone_profile', JSON.stringify(userProfile));
+      setIsRegistered(true);
+    }
+  };
   
   const [darkMode, setDarkMode] = useState(false);
 
@@ -327,6 +349,7 @@ function App() {
     if (socket) {
       const updatedProfile = { ...userProfile, ...updates };
       setUserProfile(updatedProfile);
+      localStorage.setItem('whatsapp_clone_profile', JSON.stringify(updatedProfile));
       socket.emit('updateProfile', updatedProfile);
     }
   };
@@ -489,7 +512,7 @@ function App() {
           />
 
           <button 
-            onClick={() => userProfile.id && userProfile.name && setIsRegistered(true)}
+            onClick={handleRegister}
             style={{ width: '100%', padding: '12px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
           >
             Connect

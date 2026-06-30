@@ -48,6 +48,15 @@ async function initDb() {
       type TEXT,
       timestamp TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS calls (
+      id TEXT PRIMARY KEY,
+      "callerId" TEXT NOT NULL,
+      "receiverId" TEXT NOT NULL,
+      type TEXT,
+      status TEXT,
+      timestamp TEXT
+    );
   `);
   
   return pool;
@@ -148,6 +157,27 @@ async function getStatuses(userId) {
   return res.rows;
 }
 
+async function saveCall(callId, callerId, receiverId, type, status, timestamp) {
+  await pool.query(
+    'INSERT INTO calls (id, "callerId", "receiverId", type, status, timestamp) VALUES ($1, $2, $3, $4, $5, $6)',
+    [callId, callerId, receiverId, type, status, timestamp]
+  );
+}
+
+async function getCalls(userId) {
+  const res = await pool.query(`
+    SELECT c.*, 
+           u.name as "contactName", 
+           u."avatarUrl" as "contactAvatar"
+    FROM calls c
+    JOIN users u ON (CASE WHEN c."callerId" = $1 THEN c."receiverId" ELSE c."callerId" END) = u.id
+    WHERE c."callerId" = $1 OR c."receiverId" = $1
+    ORDER BY c.timestamp DESC
+    LIMIT 20
+  `, [userId]);
+  return res.rows;
+}
+
 module.exports = {
   initDb,
   saveUser,
@@ -163,5 +193,7 @@ module.exports = {
   saveContact,
   getContacts,
   saveStatus,
-  getStatuses
+  getStatuses,
+  saveCall,
+  getCalls
 };

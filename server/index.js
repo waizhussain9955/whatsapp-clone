@@ -40,9 +40,10 @@ io.on('connection', (socket) => {
     const history = await db.getChatHistory(profileData.id);
     const contacts = await db.getContacts(profileData.id);
     const statuses = await db.getStatuses(profileData.id);
+    const calls = await db.getCalls(profileData.id);
     
     // Send initial data to the user
-    socket.emit('initData', { history, contacts, statuses });
+    socket.emit('initData', { history, contacts, statuses, calls });
 
     io.emit('users', Object.values(users));
     io.emit('groups', Object.values(groups));
@@ -163,7 +164,9 @@ io.on('connection', (socket) => {
       io.to(recipientSocket).emit('callUser', {
         signal: data.signalData,
         from: data.from,
-        name: data.name
+        name: data.name,
+        callId: data.callId,
+        callType: data.callType
       });
     }
   });
@@ -175,10 +178,29 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('endCall', (data) => {
+  socket.on('endCall', async (data) => {
+    // data = { to, callId, callerId, receiverId, type, status }
     const targetSocket = connectedUsers[data.to];
     if (targetSocket) {
       io.to(targetSocket).emit('callEnded');
+    }
+    
+    // Log call to database
+    if (data.callId) {
+      await db.saveCall(data.callId, data.callerId, data.receiverId, data.type, data.status, new Date().toISOString());
+      
+      // Broadcast updated calls to both users
+      try {
+        const callerCalls = await db.getCalls(data.callerId);
+        const callerSocket = connectedUsers[data.callerId];
+        if (callerSocket) io.to(callerSocket).emit('callHistory', callerCalls);
+
+        const receiverCalls = await db.getCalls(data.receiverId);
+        const recvSocket = connectedUsers[data.receiverId];
+        if (recvSocket) io.to(recvSocket).emit('callHistory', receiverCalls);
+      } catch (err) {
+        console.error('Failed to update call history', err);
+      }
     }
   });
 

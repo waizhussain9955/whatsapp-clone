@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { Camera, Search, MoreVertical, MessageSquare, PhoneCall, UserPlus, Edit2 } from 'lucide-react';
-import { type Chat } from '../data/mockData';
+import { type Chat, type CallLog, formatRelativeTime } from '../data/mockData';
 import { type StatusUpdate } from './StatusView';
 
 interface ChatListProps {
   chats: Chat[];
   statuses: StatusUpdate[];
+  calls: CallLog[];
   userProfile: { id: string; name: string; avatarUrl: string; about: string };
   onSelectChat: (chatId: string) => void;
   onOpenProfile: () => void;
@@ -16,7 +17,7 @@ interface ChatListProps {
 
 type TabType = 'chats' | 'status' | 'calls';
 
-const ChatList: React.FC<ChatListProps> = ({ chats, statuses, userProfile, onSelectChat, onOpenProfile, onOpenAddContact, onAddStatus, onViewStatus }) => {
+const ChatList: React.FC<ChatListProps> = ({ chats, statuses, calls, userProfile, onSelectChat, onOpenProfile, onOpenAddContact, onAddStatus, onViewStatus }) => {
   const [activeTab, setActiveTab] = useState<TabType>('chats');
   const [menuOpen, setMenuOpen] = useState(false);
   const statusFileRef = useRef<HTMLInputElement>(null);
@@ -120,7 +121,7 @@ const ChatList: React.FC<ChatListProps> = ({ chats, statuses, userProfile, onSel
                   <div className="item-title">{lastStatus.userName}</div>
                 </div>
                 <div className="item-subtitle-container">
-                  <div className="item-subtitle">{new Date(lastStatus.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                  <div className="item-subtitle">{formatRelativeTime(lastStatus.timestamp)}</div>
                 </div>
               </div>
             </div>
@@ -148,19 +149,25 @@ const ChatList: React.FC<ChatListProps> = ({ chats, statuses, userProfile, onSel
       <div style={{ padding: '8px 16px', fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--background-color)' }}>
         Recent
       </div>
-      <div className="list-item">
-        <img src="https://i.pravatar.cc/150?u=a042581f4e29026024d" className="avatar" />
-        <div className="item-content">
-          <div className="item-header">
-            <div className="item-title">John Doe</div>
-            <PhoneCall size={18} color="var(--primary-color)" />
-          </div>
-          <div className="item-subtitle-container">
-            <div className="item-subtitle" style={{ color: 'red' }}>↘ Missed</div>
-            <div className="item-time">Today, 10:30 AM</div>
+      {calls && calls.length > 0 ? calls.map(call => (
+        <div key={call.id} className="list-item">
+          <img src={call.contactAvatar || `https://ui-avatars.com/api/?name=${call.contactName || 'User'}&background=128C7E&color=fff`} className="avatar" />
+          <div className="item-content">
+            <div className="item-header">
+              <div className="item-title">{call.contactName || call.receiverId}</div>
+              <PhoneCall size={18} color="var(--primary-color)" />
+            </div>
+            <div className="item-subtitle-container">
+              <div className="item-subtitle" style={{ color: call.status === 'missed' ? 'red' : 'var(--text-secondary)' }}>
+                {call.status === 'missed' ? '↘ Missed' : (call.callerId === userProfile.id ? '↗ Outgoing' : '↙ Incoming')}
+              </div>
+              <div className="item-time">{formatRelativeTime(call.timestamp)}</div>
+            </div>
           </div>
         </div>
-      </div>
+      )) : (
+        <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>No recent calls</div>
+      )}
     </div>
   );
 

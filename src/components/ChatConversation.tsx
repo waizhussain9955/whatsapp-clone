@@ -156,7 +156,7 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ chat, username, onB
                   <div style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>🚫 {message.text}</div>
                 ) : (
                   <>
-                    {message.imageUrl && <img src={message.imageUrl} alt="attachment" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 4 }} />}
+                    {message.imageUrl && <img src={message.imageUrl} alt="attachment" style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain', borderRadius: 8, marginBottom: 4 }} />}
                     {message.audioUrl && <audio controls src={message.audioUrl} style={{ width: 200, height: 40 }} />}
                     {message.text && <div>{message.text}</div>}
                   </>

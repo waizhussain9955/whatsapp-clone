@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
+import { formatRelativeTime } from '../data/mockData';
 
 export interface StatusUpdate {
   id: string;
@@ -74,7 +75,7 @@ const StatusView: React.FC<StatusViewProps> = ({ statuses, onClose }) => {
         <div style={{ color: 'white', flex: 1 }}>
           <div style={{ fontWeight: 600, fontSize: '16px' }}>{currentStatus.userName}</div>
           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>
-            {new Date(currentStatus.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {formatRelativeTime(currentStatus.timestamp)}
           </div>
         </div>
         <X size={24} color="white" style={{ cursor: 'pointer' }} onClick={onClose} />

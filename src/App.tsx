@@ -7,7 +7,7 @@ import CallScreen from './components/CallScreen';
 import ProfileSettings from './components/ProfileSettings';
 import AddContactModal from './components/AddContactModal';
 import StatusView, { type StatusUpdate } from './components/StatusView';
-import { type Chat, type Message } from './data/mockData';
+import { type Chat, type Message, type CallLog } from './data/mockData';
 
 const SERVER_URL = 'http://localhost:5000';
 
@@ -20,6 +20,7 @@ function App() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   
   const [statuses, setStatuses] = useState<StatusUpdate[]>([]);
+  const [calls, setCalls] = useState<CallLog[]>([]);
   const [showProfile, setShowProfile] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [statusViewData, setStatusViewData] = useState<StatusUpdate[] | null>(null);
@@ -42,6 +43,7 @@ function App() {
   const [caller, setCaller] = useState('');
   const [callerSignal, setCallerSignal] = useState<any>(null);
   const [callType, setCallType] = useState<'video' | 'audio'>('video');
+  const [currentCallId, setCurrentCallId] = useState('');
 
   const localVideo = useRef<HTMLVideoElement>(null);
   const remoteVideo = useRef<HTMLVideoElement>(null);
@@ -69,7 +71,7 @@ function App() {
       newSocket.emit('register', finalProfile);
     });
 
-    newSocket.on('initData', (data: { history: Message[], contacts: any[], statuses: StatusUpdate[] }) => {
+    newSocket.on('initData', (data: { history: Message[], contacts: any[], statuses: StatusUpdate[], calls: CallLog[] }) => {
       const restoredChats: Chat[] = data.contacts.map(contact => {
         const contactMessages = data.history.filter(m => m.senderId === contact.id || m.receiverId === contact.id);
         return {
@@ -96,6 +98,11 @@ function App() {
 
       setChats(restoredChats);
       setStatuses(data.statuses || []);
+      setCalls(data.calls || []);
+    });
+
+    newSocket.on('callHistory', (newCalls: CallLog[]) => {
+      setCalls(newCalls);
     });
 
     newSocket.on('newStatus', (status: StatusUpdate) => {
@@ -233,6 +240,8 @@ function App() {
       setCallState('receiving');
       setCaller(data.from);
       setCallerSignal(data.signal);
+      setCallType(data.callType || 'video');
+      setCurrentCallId(data.callId || '');
     });
 
     newSocket.on('callAccepted', async (signal) => {
@@ -383,6 +392,8 @@ function App() {
     setCallType(type);
     setCallState('calling');
     setCaller(userToCall);
+    const newCallId = 'call_' + Date.now().toString();
+    setCurrentCallId(newCallId);
 
     const stream = await setupMediaStream();
     if (!stream) return;
@@ -401,7 +412,7 @@ function App() {
 
     const offer = await peer.createOffer();
     await peer.setLocalDescription(offer);
-    socket?.emit('callUser', { userToCall, signalData: offer, from: userProfile.id, name: userProfile.name });
+    socket?.emit('callUser', { userToCall, signalData: offer, from: userProfile.id, name: userProfile.name, callType: type, callId: newCallId });
   };
 
   const answerCall = async () => {
@@ -436,7 +447,16 @@ function App() {
   };
 
   const handleEndCall = () => {
-    if (socket && caller) socket.emit('endCall', { to: caller });
+    if (socket && caller) {
+      socket.emit('endCall', { 
+        to: caller, 
+        callId: currentCallId, 
+        callerId: userProfile.id, 
+        receiverId: caller, 
+        type: callType, 
+        status: callState === 'accepted' ? 'answered' : 'missed' 
+      });
+    }
     endCallLocally();
   };
 
@@ -500,6 +520,7 @@ function App() {
         <ChatList 
           chats={chats}
           statuses={statuses}
+          calls={calls}
           userProfile={userProfile}
           onSelectChat={(id) => { setSelectedChatId(id); setChats(prev => prev.map(c => c.id === id ? { ...c, unreadCount: 0 } : c)); }}
           onOpenProfile={() => setShowProfile(true)}
@@ -517,28 +538,41 @@ function App() {
       </div>
 
       <div className={`right-pane ${!selectedChatId ? 'hide-on-mobile' : ''}`}>
-        {selectedChatId && selectedChat ? (
-          <ChatConversation 
-            chat={selectedChat}
-            username={userProfile.id}
-            onBack={() => {
-              setSelectedChatId(null);
-              setChats(prev => prev.map(c => c.id === selectedChatId ? { ...c, unreadCount: 0 } : c));
-            }} 
-            onSendMessage={handleSendMessage}
-            onEditMessage={handleEditMessage}
-            onDeleteMessage={handleDeleteMessage}
-            onTyping={handleTyping}
-            onCall={(type) => initCall(selectedChat.id, type)}
-            onMarkRead={() => socket?.emit('messageRead', { to: selectedChat.id })}
-          />
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)' }}>
-            <img src="https://web.whatsapp.com/img/intro-connection-hq-light_9466a20e6d2921a21ac7ab82419be157.jpg" alt="WhatsApp Web" style={{ width: '80%', maxWidth: 300, marginBottom: 20 }} />
-            <h1 style={{ fontWeight: 300, fontSize: 32, marginBottom: 16, textAlign: 'center' }}>WhatsApp Clone Web</h1>
-            <p style={{ fontSize: 14, textAlign: 'center' }}>Send and receive messages without keeping your phone online.</p>
-          </div>
-        )}
+            {selectedChatId ? (
+              <ChatConversation 
+                chat={chats.find(c => c.id === selectedChatId)!} 
+                username={userProfile.id}
+                onBack={() => setSelectedChatId(null)}
+                onSendMessage={handleSendMessage}
+                onEditMessage={(chatId, msgId, newText) => {
+                  socket?.emit('editMessage', { to: chatId, messageId: msgId, newText, from: userProfile.id, isGroup: chats.find(c => c.id === chatId)?.isGroup });
+                }}
+                onDeleteMessage={(chatId, msgId, type) => {
+                  socket?.emit('deleteMessage', { to: chatId, messageId: msgId, type, from: userProfile.id, isGroup: chats.find(c => c.id === chatId)?.isGroup });
+                }}
+                onCall={type => initCall(selectedChatId, type)}
+                onTyping={(chatId, isTyping) => {
+                  socket?.emit('typing', { to: chatId, from: userProfile.id, isTyping, isGroup: chats.find(c => c.id === chatId)?.isGroup });
+                }}
+                onMarkRead={() => {
+                  // Wait a short delay to mark messages read when opening chat
+                  setTimeout(() => {
+                    const c = chats.find(x => x.id === selectedChatId);
+                    if (c && c.unreadCount > 0) {
+                      socket?.emit('messageRead', { to: selectedChatId });
+                      setChats(prev => prev.map(ch => ch.id === selectedChatId ? { ...ch, unreadCount: 0 } : ch));
+                    }
+                  }, 500);
+                }}
+              />
+            ) : (
+              <div className="empty-state">
+                <img src="https://web.whatsapp.com/img/intro-connection-hq-light_9466a20e6d2921a21ac7ab82419be157.jpg" alt="WhatsApp Web" style={{ width: '80%', maxWidth: 300, marginBottom: 20 }} />
+                <h1>WhatsApp for Web</h1>
+                <p>Send and receive messages without keeping your phone online.</p>
+                <p>Use WhatsApp on up to 4 linked devices and 1 phone at the same time.</p>
+              </div>
+            )}
       </div>
 
       {showAddContact && (

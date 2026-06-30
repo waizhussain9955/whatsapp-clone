@@ -610,6 +610,38 @@ function App() {
         <StatusView 
           statuses={statusViewData} 
           onClose={() => setStatusViewData(null)} 
+          onReply={(userId, text) => {
+             // Handle reply as a chat message
+             const msgId = `m${Date.now()}`;
+             const newMessage = {
+               id: msgId,
+               senderId: userProfile.id,
+               text: text,
+               timestamp: new Date().toISOString(),
+               status: 'sent' as const
+             };
+             
+             // Emit to server
+             socket?.emit('sendMessage', { to: userId, message: newMessage, from: userProfile.id, isGroup: false });
+             
+             // Add to local state
+             setChats(prev => {
+               const chatExists = prev.find(c => c.id === userId);
+               if (chatExists) {
+                 return prev.map(c => c.id === userId ? { ...c, messages: [...c.messages, newMessage] } : c);
+               } else {
+                 return [...prev, {
+                   id: userId,
+                   contact: { id: userId, name: userId, avatarUrl: `https://ui-avatars.com/api/?name=${userId}&background=075E54&color=fff`, isOnline: false, lastSeen: 'offline' },
+                   messages: [newMessage],
+                   unreadCount: 0
+                 }];
+               }
+             });
+             
+             // Automatically switch to that chat
+             setSelectedChatId(userId);
+          }}
         />
       )}
     </>

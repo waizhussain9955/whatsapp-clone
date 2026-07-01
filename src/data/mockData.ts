@@ -52,6 +52,7 @@ export interface Message {
   status: 'sent' | 'delivered' | 'read';
   isEdited?: boolean;
   isDeleted?: boolean;
+  replyTo?: string; // id of the message this is replying to
 }
 
 export interface Chat {

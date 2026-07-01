@@ -282,7 +282,7 @@ function App() {
     };
   }, [isRegistered]);
 
-  const handleSendMessage = (chatId: string, text: string, imageUrl?: string, audioUrl?: string) => {
+  const handleSendMessage = (chatId: string, text: string, imageUrl?: string, audioUrl?: string, replyTo?: string) => {
     const chat = chats.find(c => c.id === chatId);
     const isGroup = chat?.isGroup || false;
 
@@ -293,7 +293,8 @@ function App() {
       imageUrl,
       audioUrl,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: 'sent'
+      status: 'sent',
+      replyTo
     };
 
     if (socket) {
@@ -564,9 +565,9 @@ function App() {
             {selectedChatId ? (
               <ChatConversation 
                 chat={chats.find(c => c.id === selectedChatId)!} 
-                username={userProfile.id}
-                onBack={() => setSelectedChatId(null)}
-                onSendMessage={handleSendMessage}
+                username={userProfile.name}
+                onBack={() => setSelectedChatId(null)} 
+                onSendMessage={(chatId, text, img, aud, replyToId) => handleSendMessage(chatId, text, img, aud, replyToId)}
                 onEditMessage={(chatId, msgId, newText) => {
                   socket?.emit('editMessage', { to: chatId, messageId: msgId, newText, from: userProfile.id, isGroup: chats.find(c => c.id === chatId)?.isGroup });
                 }}

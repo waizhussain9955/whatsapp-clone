@@ -34,6 +34,7 @@ async function initDb() {
       text TEXT,
       "imageUrl" TEXT,
       "audioUrl" TEXT,
+      "replyTo" TEXT,
       timestamp TEXT,
       status TEXT,
       "isGroup" BOOLEAN,
@@ -95,8 +96,8 @@ async function getAllUsers() {
 
 async function saveMessage(msg, receiverId, isGroup) {
   await pool.query(
-    'INSERT INTO messages (id, "senderId", "receiverId", text, "imageUrl", "audioUrl", timestamp, status, "isGroup") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-    [msg.id, msg.senderId, receiverId, msg.text, msg.imageUrl, msg.audioUrl, msg.timestamp, msg.status, isGroup ? true : false]
+    'INSERT INTO messages (id, "senderId", "receiverId", text, "imageUrl", "audioUrl", "replyTo", timestamp, status, "isGroup") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+    [msg.id, msg.senderId, receiverId, msg.text, msg.imageUrl, msg.audioUrl, msg.replyTo, msg.timestamp, msg.status, isGroup ? true : false]
   );
 }
 

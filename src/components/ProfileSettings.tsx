@@ -2,16 +2,18 @@ import React, { useState, useRef } from 'react';
 import { ArrowLeft, Camera, Edit2, Check } from 'lucide-react';
 
 interface ProfileSettingsProps {
-  userProfile: { id: string; name: string; avatarUrl: string; about: string };
+  userProfile: { id: string; name: string; avatarUrl: string; about: string; wallpaperUrl?: string };
   onClose: () => void;
-  onUpdateProfile: (updates: { name?: string; about?: string; avatarUrl?: string }) => void;
+  onUpdateProfile: (updates: { name?: string; about?: string; avatarUrl?: string; wallpaperUrl?: string }) => void;
 }
 
 const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, onClose, onUpdateProfile }) => {
   const [name, setName] = useState(userProfile.name);
   const [about, setAbout] = useState(userProfile.about);
+  const [wallpaperUrl, setWallpaperUrl] = useState(userProfile.wallpaperUrl || '');
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingAbout, setIsEditingAbout] = useState(false);
+  const [isEditingWallpaper, setIsEditingWallpaper] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,6 +35,11 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, onClose,
   const handleSaveAbout = () => {
     onUpdateProfile({ about });
     setIsEditingAbout(false);
+  };
+
+  const handleSaveWallpaper = () => {
+    onUpdateProfile({ wallpaperUrl });
+    setIsEditingWallpaper(false);
   };
 
   return (
@@ -87,6 +94,25 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ userProfile, onClose,
               <>
                 <div style={{ fontSize: 17, color: 'var(--text-primary)' }}>{userProfile.about}</div>
                 <Edit2 size={20} color="var(--text-secondary)" style={{ cursor: 'pointer' }} onClick={() => setIsEditingAbout(true)} />
+              </>
+            )}
+          </div>
+        </div>
+
+        <div style={{ backgroundColor: 'var(--panel-background)', padding: '14px 30px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', marginTop: '12px' }}>
+          <div style={{ fontSize: 14, color: 'var(--primary-color)', marginBottom: 14 }}>Chat Wallpaper (Image URL)</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            {isEditingWallpaper ? (
+              <div style={{ display: 'flex', flex: 1, borderBottom: '2px solid var(--primary-color)', paddingBottom: 4 }}>
+                <input autoFocus type="text" value={wallpaperUrl} onChange={(e) => setWallpaperUrl(e.target.value)} placeholder="https://..." style={{ border: 'none', outline: 'none', background: 'transparent', flex: 1, fontSize: 17, color: 'var(--text-primary)' }} />
+                <Check size={24} color="var(--primary-color)" style={{ cursor: 'pointer' }} onClick={handleSaveWallpaper} />
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 17, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
+                  {userProfile.wallpaperUrl || 'Default'}
+                </div>
+                <Edit2 size={20} color="var(--text-secondary)" style={{ cursor: 'pointer' }} onClick={() => setIsEditingWallpaper(true)} />
               </>
             )}
           </div>
